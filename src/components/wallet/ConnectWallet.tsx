@@ -1,6 +1,6 @@
 import React from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useNetwork, useSwitchNetwork } from 'wagmi';
+import { useAccount, useChainId, useConfig } from 'wagmi';
 import { mezoTestnet } from '@mezo-org/passport';
 import { Loader2 } from 'lucide-react';
 
@@ -14,16 +14,17 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
   onDisconnect
 }) => {
   const { isConnected } = useAccount();
-  const { chain } = useNetwork();
-  const { switchNetwork, isLoading: isSwitching } = useSwitchNetwork();
+  const chainId = useChainId();
+  const config = useConfig();
+  const isSwitching = false; // We'll handle network switching through RainbowKit
 
   React.useEffect(() => {
-    if (isConnected && chain?.id === mezoTestnet.id && onConnect) {
+    if (isConnected && chainId === mezoTestnet.id && onConnect) {
       onConnect();
     } else if (!isConnected && onDisconnect) {
       onDisconnect();
     }
-  }, [isConnected, chain?.id, onConnect, onDisconnect]);
+  }, [isConnected, chainId, onConnect, onDisconnect]);
 
   return (
     <ConnectButton.Custom>
@@ -36,7 +37,7 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
         mounted,
       }) => {
         const ready = mounted;
-        const connected = ready && account && chain;
+        const connected = ready && account;
 
         return (
           <div
@@ -70,22 +71,14 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
                 );
               }
 
-              if (chain.unsupported) {
+              if (chainId !== mezoTestnet.id) {
                 return (
                   <button
-                    onClick={() => switchNetwork?.(mezoTestnet.id)}
+                    onClick={openChainModal}
                     type="button"
-                    disabled={isSwitching}
-                    className="relative overflow-hidden bg-red-500 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative overflow-hidden bg-red-500 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
                   >
-                    {isSwitching ? (
-                      <>
-                        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
-                        Switching to Mezo...
-                      </>
-                    ) : (
-                      'Switch to Mezo Network'
-                    )}
+                    Switch to Mezo Network
                   </button>
                 );
               }
