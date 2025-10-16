@@ -1,6 +1,8 @@
 import React from 'react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount } from 'wagmi';
+import { useAccount, useNetwork, useSwitchNetwork } from 'wagmi';
+import { mezoTestnet } from '@mezo-org/passport';
+import { Loader2 } from 'lucide-react';
 
 interface ConnectWalletProps {
   onConnect?: () => void;
@@ -12,14 +14,16 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
   onDisconnect
 }) => {
   const { isConnected } = useAccount();
+  const { chain } = useNetwork();
+  const { switchNetwork, isLoading: isSwitching } = useSwitchNetwork();
 
   React.useEffect(() => {
-    if (isConnected && onConnect) {
+    if (isConnected && chain?.id === mezoTestnet.id && onConnect) {
       onConnect();
     } else if (!isConnected && onDisconnect) {
       onDisconnect();
     }
-  }, [isConnected, onConnect, onDisconnect]);
+  }, [isConnected, chain?.id, onConnect, onDisconnect]);
 
   return (
     <ConnectButton.Custom>
@@ -51,9 +55,17 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
                   <button
                     onClick={openConnectModal}
                     type="button"
-                    className="relative overflow-hidden bg-gradient-to-r from-purple-500 to-violet-500 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 group"
+                    disabled={isSwitching}
+                    className="relative overflow-hidden bg-gradient-to-r from-purple-500 to-violet-500 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Connect Wallet
+                    {isSwitching ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+                        Switching Network...
+                      </>
+                    ) : (
+                      'Connect Wallet'
+                    )}
                   </button>
                 );
               }
@@ -61,11 +73,19 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
               if (chain.unsupported) {
                 return (
                   <button
-                    onClick={openChainModal}
+                    onClick={() => switchNetwork?.(mezoTestnet.id)}
                     type="button"
-                    className="relative overflow-hidden bg-red-500 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg"
+                    disabled={isSwitching}
+                    className="relative overflow-hidden bg-red-500 text-white px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Wrong network
+                    {isSwitching ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+                        Switching to Mezo...
+                      </>
+                    ) : (
+                      'Switch to Mezo Network'
+                    )}
                   </button>
                 );
               }
@@ -75,7 +95,7 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="flex items-center bg-gray-800 text-white px-4 py-2 rounded-xl"
+                    className="flex items-center bg-gray-800 text-white px-4 py-2 rounded-xl hover:bg-gray-700 transition-colors"
                   >
                     {chain.hasIcon && (
                       <div className="mr-2">
@@ -94,7 +114,7 @@ export const ConnectWallet: React.FC<ConnectWalletProps> = ({
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="bg-gray-800 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+                    className="bg-gray-800 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-gray-700 transition-colors"
                   >
                     {account.displayBalance && (
                       <span>{account.displayBalance}</span>

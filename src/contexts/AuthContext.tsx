@@ -1,81 +1,62 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAccount, useBalance, useDisconnect } from 'wagmi';
+import { mezoTestnet } from '@mezo-org/passport';
 
 interface User {
-  id: string;
   address: string;
   balance: {
-    btc: number;
-    musd: number;
+    btc: string;
+    musd: string;
   };
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  connect: () => Promise<void>;
   disconnect: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { address, isConnecting: isWalletConnecting } = useAccount();
+  const { data: btcBalance, isLoading: isBtcLoading } = useBalance({
+    address,
+    chainId: mezoTestnet.id,
+    token: '0x...' // Add BTC token address
+  });
+  const { data: musdBalance, isLoading: isMusdLoading } = useBalance({
+    address,
+    chainId: mezoTestnet.id,
+    token: '0x...' // Add MUSD token address
+  });
+  const { disconnect: wagmiDisconnect } = useDisconnect();
+
+  const isLoading = isWalletConnecting || isBtcLoading || isMusdLoading;
+
+  const user: User | null = address ? {
+    address,
+    balance: {
+      btc: btcBalance?.formatted || '0',
+      musd: musdBalance?.formatted || '0'
+    }
+  } : null;
 
   useEffect(() => {
-    // Check for existing session
-    const checkSession = async () => {
-      try {
-        // TODO: Implement actual session check with Mezo
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-          setUser(JSON.parse(savedUser));
-        }
-      } catch (error) {
-        console.error('Session check failed:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkSession();
-  }, []);
-
-  const connect = async () => {
-    try {
-      setIsLoading(true);
-      // TODO: Implement actual Mezo wallet connection
-      // For now, using mock data
-      const mockUser = {
-        id: 'user_' + Math.random().toString(36).substr(2, 9),
-        address: '0x' + Math.random().toString(36).substr(2, 40),
-        balance: {
-          btc: 0.05,
-          musd: 1000
-        }
-      };
-
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+    if (user && !isLoading) {
       navigate('/dashboard');
-    } catch (error) {
-      console.error('Connection failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
     }
-  };
+  }, [user, isLoading, navigate]);
 
   const disconnect = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+    wagmiDisconnect();
     navigate('/');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, connect, disconnect }}>
+    <AuthContext.Provider value={{ user, isLoading, disconnect }}>
       {children}
     </AuthContext.Provider>
   );

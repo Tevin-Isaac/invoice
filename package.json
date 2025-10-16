@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@mezo-org/passport": "^0.1.0",
+    "@mezo-org/passport": "latest",
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.0",
     "@openzeppelin/contracts": "^5.4.0",
-    "@rainbow-me/rainbowkit": "^2.2.9",
+    "@rainbow-me/rainbowkit": "^2.0.0",
     "@tailwindcss/vite": "^4.1.14",
-    "@tanstack/react-query": "^5.90.4",
+    "@tanstack/react-query": "^5.0.0",
     "@types/chai": "^5.2.2",
     "@types/react-router-dom": "^5.3.3",
     "chai": "^6.2.0",
@@ -25,9 +25,10 @@
     "react": "^19.2.0",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.4",
+    "sats-connect": "^4.1.1",
     "tailwindcss": "^4.1.14",
-    "viem": "^2.38.2",
-    "wagmi": "^2.18.1"
+    "viem": "^2.0.0",
+    "wagmi": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

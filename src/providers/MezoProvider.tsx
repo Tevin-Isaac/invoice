@@ -1,111 +1,152 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { mezoConfig } from '../config/mezo.config';
+import { useAccount, useBalance, useContractRead, useContractWrite } from 'wagmi';
+import { mezoTestnet } from '@mezo-org/passport';
 import { useAuth } from '../contexts/AuthContext';
 
+// TODO: Import actual ABI and contract addresses
+const VAULT_ABI = [];
+const MUSD_ABI = [];
+const VAULT_ADDRESS = '0x...';
+const MUSD_ADDRESS = '0x...';
+
 interface MezoState {
-  btcPrice: number;
-  musdBalance: number;
-  btcBalance: number;
+  btcPrice: string;
+  musdBalance: string;
+  btcBalance: string;
   vaultHealth: number;
   isConnected: boolean;
 }
 
 interface MezoContextType {
   state: MezoState;
-  connect: () => Promise<void>;
-  disconnect: () => void;
-  borrowMUSD: (amount: number) => Promise<void>;
-  repayMUSD: (amount: number) => Promise<void>;
-  depositBTC: (amount: number) => Promise<void>;
-  withdrawBTC: (amount: number) => Promise<void>;
+  borrowMUSD: (amount: string) => Promise<void>;
+  repayMUSD: (amount: string) => Promise<void>;
+  depositBTC: (amount: string) => Promise<void>;
+  withdrawBTC: (amount: string) => Promise<void>;
+  isLoading: boolean;
 }
 
 const MezoContext = createContext<MezoContextType | undefined>(undefined);
 
 export function MezoProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [state, setState] = useState<MezoState>({
-    btcPrice: 0,
-    musdBalance: 0,
-    btcBalance: 0,
-    vaultHealth: 100,
-    isConnected: false
+  const { address, isConnected } = useAccount();
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Get BTC balance
+  const { data: btcBalance } = useBalance({
+    address,
+    token: '0x...', // BTC token address
+    chainId: mezoTestnet.id,
+    watch: true,
   });
 
-  useEffect(() => {
-    if (user) {
-      // Initialize Mezo connection
-      initializeMezo();
-    }
-  }, [user]);
+  // Get MUSD balance
+  const { data: musdBalance } = useBalance({
+    address,
+    token: MUSD_ADDRESS,
+    chainId: mezoTestnet.id,
+    watch: true,
+  });
 
-  const initializeMezo = async () => {
-    try {
-      // TODO: Initialize Mezo SDK with proper configuration
-      setState(prev => ({
-        ...prev,
-        isConnected: true
-      }));
-    } catch (error) {
-      console.error('Failed to initialize Mezo:', error);
-    }
+  // Get BTC price from oracle
+  const { data: btcPrice } = useContractRead({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'getBTCPrice',
+    chainId: mezoTestnet.id,
+    watch: true,
+  });
+
+  // Get vault health
+  const { data: vaultHealth } = useContractRead({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'getVaultHealth',
+    args: [address],
+    chainId: mezoTestnet.id,
+    watch: true,
+    enabled: !!address,
+  });
+
+  // Contract write functions
+  const { writeAsync: borrowMUSDAsync } = useContractWrite({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'borrowMUSD',
+  });
+
+  const { writeAsync: repayMUSDAsync } = useContractWrite({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'repayMUSD',
+  });
+
+  const { writeAsync: depositBTCAsync } = useContractWrite({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'depositBTC',
+  });
+
+  const { writeAsync: withdrawBTCAsync } = useContractWrite({
+    address: VAULT_ADDRESS,
+    abi: VAULT_ABI,
+    functionName: 'withdrawBTC',
+  });
+
+  const state: MezoState = {
+    btcPrice: btcPrice?.toString() || '0',
+    musdBalance: musdBalance?.formatted || '0',
+    btcBalance: btcBalance?.formatted || '0',
+    vaultHealth: Number(vaultHealth || 0),
+    isConnected,
   };
 
-  const connect = async () => {
+  const borrowMUSD = async (amount: string) => {
     try {
-      // TODO: Implement Mezo wallet connection
-      await initializeMezo();
-    } catch (error) {
-      console.error('Failed to connect to Mezo:', error);
-      throw error;
-    }
-  };
-
-  const disconnect = () => {
-    // TODO: Implement Mezo disconnect
-    setState(prev => ({
-      ...prev,
-      isConnected: false
-    }));
-  };
-
-  const borrowMUSD = async (amount: number) => {
-    try {
-      // TODO: Implement MUSD borrowing
-      console.log('Borrowing MUSD:', amount);
+      setIsLoading(true);
+      await borrowMUSDAsync({ args: [amount] });
     } catch (error) {
       console.error('Failed to borrow MUSD:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const repayMUSD = async (amount: number) => {
+  const repayMUSD = async (amount: string) => {
     try {
-      // TODO: Implement MUSD repayment
-      console.log('Repaying MUSD:', amount);
+      setIsLoading(true);
+      await repayMUSDAsync({ args: [amount] });
     } catch (error) {
       console.error('Failed to repay MUSD:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const depositBTC = async (amount: number) => {
+  const depositBTC = async (amount: string) => {
     try {
-      // TODO: Implement BTC deposit
-      console.log('Depositing BTC:', amount);
+      setIsLoading(true);
+      await depositBTCAsync({ args: [amount] });
     } catch (error) {
       console.error('Failed to deposit BTC:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const withdrawBTC = async (amount: number) => {
+  const withdrawBTC = async (amount: string) => {
     try {
-      // TODO: Implement BTC withdrawal
-      console.log('Withdrawing BTC:', amount);
+      setIsLoading(true);
+      await withdrawBTCAsync({ args: [amount] });
     } catch (error) {
       console.error('Failed to withdraw BTC:', error);
       throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -113,12 +154,11 @@ export function MezoProvider({ children }: { children: React.ReactNode }) {
     <MezoContext.Provider
       value={{
         state,
-        connect,
-        disconnect,
         borrowMUSD,
         repayMUSD,
         depositBTC,
-        withdrawBTC
+        withdrawBTC,
+        isLoading,
       }}
     >
       {children}
